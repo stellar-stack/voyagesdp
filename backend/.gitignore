@@ -1,0 +1,54 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual environments
+venv/
+.venv/
+env/
+ENV/
+
+# Django
+*.pyc
+db.sqlite3
+db.sqlite3-journal
+staticfiles/
+local_settings.py
+
+# Media uploads (user files — do not commit)
+media/
+
+# Environment variables (NEVER commit this)
+.env
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+coverage.xml
+
+# Logs
+*.log
+
+# Docker
+*.override.yml
+
+# Temp files
+*.bak
+_write_settings.py
