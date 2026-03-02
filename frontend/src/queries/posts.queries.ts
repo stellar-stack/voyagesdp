@@ -4,10 +4,26 @@ import {
   useQuery,
   useQueryClient,
   type InfiniteData,
+  type QueryKey,
 } from '@tanstack/react-query'
 import { postsApi } from '@/api'
 import { QUERY_KEYS } from './queryClient'
 import type { Post, CreatePostPayload, ReactionType, PaginatedResponse } from '@/types'
+
+// Shared helper: apply an update function to every post in an InfiniteData structure
+function updateInfinitePost(
+  old: InfiniteData<PaginatedResponse<Post>> | undefined,
+  fn: (post: Post) => Post
+): InfiniteData<PaginatedResponse<Post>> | undefined {
+  if (!old) return old
+  return {
+    ...old,
+    pages: old.pages.map((page) => ({
+      ...page,
+      results: page.results.map(fn),
+    })),
+  }
+}
 
 export function usePostQuery(postId: number) {
   return useQuery({
@@ -87,9 +103,70 @@ export function useEditPost() {
   return useMutation({
     mutationFn: ({ postId, payload }: { postId: number; payload: { caption?: string; content?: string } }) =>
       postsApi.editPost(postId, payload),
-    onSuccess: (_data: Post, { postId }: { postId: number; payload: { caption?: string; content?: string } }) => {
-      qc.invalidateQueries({ queryKey: QUERY_KEYS.FEED })
-      qc.invalidateQueries({ queryKey: QUERY_KEYS.POST(postId) })
+
+    onMutate: async ({ postId, payload }) => {
+      await qc.cancelQueries({ queryKey: QUERY_KEYS.FEED })
+      await qc.cancelQueries({ queryKey: ['posts', 'community'] })
+      await qc.cancelQueries({ queryKey: QUERY_KEYS.POST(postId) })
+
+      const previousFeed = qc.getQueryData(QUERY_KEYS.FEED)
+      const previousPost = qc.getQueryData<Post>(QUERY_KEYS.POST(postId))
+      const allCommunityFeeds = qc.getQueriesData<InfiniteData<PaginatedResponse<Post>>>({
+        queryKey: ['posts', 'community'],
+      })
+
+      const applyEdit = (post: Post): Post => {
+        if (post.id !== postId) return post
+        return {
+          ...post,
+          ...(payload.caption !== undefined && { caption: payload.caption }),
+          ...(payload.content !== undefined && { content: payload.content }),
+        }
+      }
+
+      qc.setQueryData(
+        QUERY_KEYS.FEED,
+        (old: InfiniteData<PaginatedResponse<Post>> | undefined) => updateInfinitePost(old, applyEdit)
+      )
+      for (const [key, data] of allCommunityFeeds) {
+        qc.setQueryData(key as QueryKey, updateInfinitePost(data, applyEdit))
+      }
+      if (previousPost) {
+        qc.setQueryData<Post>(QUERY_KEYS.POST(postId), applyEdit(previousPost))
+      }
+
+      return { previousFeed, previousPost, allCommunityFeeds }
+    },
+
+    onSuccess: (updatedPost, { postId }) => {
+      // Replace optimistic data with the actual server response
+      const applyServer = (post: Post): Post => post.id === postId ? updatedPost : post
+
+      qc.setQueryData(
+        QUERY_KEYS.FEED,
+        (old: InfiniteData<PaginatedResponse<Post>> | undefined) => updateInfinitePost(old, applyServer)
+      )
+      const allCommunityFeeds = qc.getQueriesData<InfiniteData<PaginatedResponse<Post>>>({
+        queryKey: ['posts', 'community'],
+      })
+      for (const [key, data] of allCommunityFeeds) {
+        qc.setQueryData(key as QueryKey, updateInfinitePost(data, applyServer))
+      }
+      qc.setQueryData<Post>(QUERY_KEYS.POST(postId), updatedPost)
+    },
+
+    onError: (_err, { postId }, context) => {
+      if (context?.previousFeed) qc.setQueryData(QUERY_KEYS.FEED, context.previousFeed)
+      if (context?.previousPost) qc.setQueryData(QUERY_KEYS.POST(postId), context.previousPost)
+      for (const [key, data] of context?.allCommunityFeeds ?? []) {
+        qc.setQueryData(key as QueryKey, data)
+      }
+    },
+
+    onSettled: (_data, _err, { postId }) => {
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.FEED, refetchType: 'none' })
+      qc.invalidateQueries({ queryKey: ['posts', 'community'], refetchType: 'none' })
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.POST(postId), refetchType: 'none' })
     },
   })
 }
@@ -100,6 +177,7 @@ export function useDeletePost() {
     mutationFn: (postId: number) => postsApi.deletePost(postId),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: QUERY_KEYS.FEED })
+      qc.invalidateQueries({ queryKey: ['posts', 'community'] })
     },
   })
 }
@@ -112,66 +190,75 @@ export function useToggleReaction(postId: number) {
       postsApi.toggleReaction(postId, reactionType),
 
     onMutate: async (newReaction) => {
+      // Cancel all inflight post queries to avoid overwriting our optimistic update
       await qc.cancelQueries({ queryKey: QUERY_KEYS.FEED })
-      const previousFeed = qc.getQueryData(QUERY_KEYS.FEED)
+      await qc.cancelQueries({ queryKey: ['posts', 'community'] })
+      await qc.cancelQueries({ queryKey: QUERY_KEYS.POST(postId) })
 
+      // Snapshot current state for rollback on error
+      const previousFeed = qc.getQueryData(QUERY_KEYS.FEED)
+      const previousPost = qc.getQueryData<Post>(QUERY_KEYS.POST(postId))
+      const allCommunityFeeds = qc.getQueriesData<InfiniteData<PaginatedResponse<Post>>>({
+        queryKey: ['posts', 'community'],
+      })
+
+      // Single post update function reused across all cache types
+      const applyUpdate = (post: Post): Post => {
+        if (post.id !== postId) return post
+        const prevReaction = post.user_reaction
+        const prevCount = post.reactions_count
+        const prevSummary = { ...post.reactions_summary }
+
+        if (prevReaction && prevSummary[prevReaction]) {
+          prevSummary[prevReaction] = (prevSummary[prevReaction] ?? 1) - 1
+          if (prevSummary[prevReaction] === 0) delete prevSummary[prevReaction]
+        }
+        if (newReaction) {
+          prevSummary[newReaction] = (prevSummary[newReaction] ?? 0) + 1
+        }
+
+        const countDelta =
+          prevReaction && !newReaction ? -1 : !prevReaction && newReaction ? 1 : 0
+
+        return {
+          ...post,
+          user_reaction: newReaction,
+          reactions_count: prevCount + countDelta,
+          reactions_summary: prevSummary,
+        }
+      }
+
+      // Update FEED cache
       qc.setQueryData(
         QUERY_KEYS.FEED,
-        (old: InfiniteData<PaginatedResponse<Post>> | undefined) => {
-          if (!old) return old
-          return {
-            ...old,
-            pages: old.pages.map((page) => ({
-              ...page,
-              results: page.results.map((post) => {
-                if (post.id !== postId) return post
-                const prevReaction = post.user_reaction
-                const prevCount = post.reactions_count
-                const prevSummary = { ...post.reactions_summary }
-
-                // Remove old reaction count
-                if (prevReaction && prevSummary[prevReaction]) {
-                  prevSummary[prevReaction] = (prevSummary[prevReaction] ?? 1) - 1
-                  if (prevSummary[prevReaction] === 0) delete prevSummary[prevReaction]
-                }
-
-                // Add new reaction count
-                if (newReaction) {
-                  prevSummary[newReaction] = (prevSummary[newReaction] ?? 0) + 1
-                }
-
-                const countDelta =
-                  prevReaction && !newReaction
-                    ? -1
-                    : !prevReaction && newReaction
-                      ? 1
-                      : 0
-
-                return {
-                  ...post,
-                  user_reaction: newReaction,
-                  reactions_count: prevCount + countDelta,
-                  reactions_summary: prevSummary,
-                }
-              }),
-            })),
-          }
-        }
+        (old: InfiniteData<PaginatedResponse<Post>> | undefined) => updateInfinitePost(old, applyUpdate)
       )
 
-      return { previousFeed }
+      // Update every community feed currently in cache
+      for (const [key, data] of allCommunityFeeds) {
+        qc.setQueryData(key as QueryKey, updateInfinitePost(data, applyUpdate))
+      }
+
+      // Update single-post cache (PostDetailPage)
+      if (previousPost) {
+        qc.setQueryData<Post>(QUERY_KEYS.POST(postId), applyUpdate(previousPost))
+      }
+
+      return { previousFeed, previousPost, allCommunityFeeds }
     },
 
     onError: (_err, _vars, context) => {
-      if (context?.previousFeed) {
-        qc.setQueryData(QUERY_KEYS.FEED, context.previousFeed)
+      if (context?.previousFeed) qc.setQueryData(QUERY_KEYS.FEED, context.previousFeed)
+      if (context?.previousPost) qc.setQueryData(QUERY_KEYS.POST(postId), context.previousPost)
+      for (const [key, data] of context?.allCommunityFeeds ?? []) {
+        qc.setQueryData(key as QueryKey, data)
       }
     },
 
     onSettled: () => {
-      // Mark stale without forcing an immediate network request —
-      // the optimistic update is already applied and correct.
       qc.invalidateQueries({ queryKey: QUERY_KEYS.FEED, refetchType: 'none' })
+      qc.invalidateQueries({ queryKey: ['posts', 'community'], refetchType: 'none' })
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.POST(postId), refetchType: 'none' })
     },
   })
 }
@@ -180,47 +267,65 @@ export function useToggleBookmark() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (postId: number) => postsApi.toggleBookmark(postId),
+
     onMutate: async (postId) => {
       await qc.cancelQueries({ queryKey: QUERY_KEYS.FEED })
+      await qc.cancelQueries({ queryKey: ['posts', 'community'] })
+      await qc.cancelQueries({ queryKey: QUERY_KEYS.POST(postId) })
+
       const prevFeed = qc.getQueryData(QUERY_KEYS.FEED)
       const prevPost = qc.getQueryData<Post>(QUERY_KEYS.POST(postId))
+      const allCommunityFeeds = qc.getQueriesData<InfiniteData<PaginatedResponse<Post>>>({
+        queryKey: ['posts', 'community'],
+      })
 
-      const flipPost = (post: Post) =>
+      const flipBookmark = (post: Post): Post =>
         post.id === postId ? { ...post, is_bookmarked: !post.is_bookmarked } : post
 
+      // Update FEED
       qc.setQueryData(
         QUERY_KEYS.FEED,
-        (old: InfiniteData<PaginatedResponse<Post>> | undefined) => {
-          if (!old) return old
-          return {
-            ...old,
-            pages: old.pages.map((page) => ({
-              ...page,
-              results: page.results.map(flipPost),
-            })),
-          }
-        }
+        (old: InfiniteData<PaginatedResponse<Post>> | undefined) => updateInfinitePost(old, flipBookmark)
       )
 
-      if (prevPost) {
-        qc.setQueryData<Post>(QUERY_KEYS.POST(postId), {
-          ...prevPost,
-          is_bookmarked: !prevPost.is_bookmarked,
-        })
+      // Update all community feeds
+      for (const [key, data] of allCommunityFeeds) {
+        qc.setQueryData(key as QueryKey, updateInfinitePost(data, flipBookmark))
       }
 
-      return { prevFeed, prevPost }
+      // Update single post
+      if (prevPost) {
+        qc.setQueryData<Post>(QUERY_KEYS.POST(postId), flipBookmark(prevPost))
+      }
+
+      return { prevFeed, prevPost, allCommunityFeeds }
     },
+
     onError: (_err, postId, context) => {
       if (context?.prevFeed) qc.setQueryData(QUERY_KEYS.FEED, context.prevFeed)
       if (context?.prevPost) qc.setQueryData(QUERY_KEYS.POST(postId), context.prevPost)
+      for (const [key, data] of context?.allCommunityFeeds ?? []) {
+        qc.setQueryData(key as QueryKey, data)
+      }
     },
+
     onSettled: (_data, _err, postId) => {
-      // Mark stale without forcing an immediate refetch on FEED/POST.
-      // Bookmarks list needs a real refetch since its structure differs (Bookmark, not Post).
       qc.invalidateQueries({ queryKey: QUERY_KEYS.FEED, refetchType: 'none' })
+      qc.invalidateQueries({ queryKey: ['posts', 'community'], refetchType: 'none' })
       qc.invalidateQueries({ queryKey: QUERY_KEYS.POST(postId), refetchType: 'none' })
       qc.invalidateQueries({ queryKey: QUERY_KEYS.BOOKMARKS })
+    },
+  })
+}
+
+export function useSharePost() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (postId: number) => postsApi.sharePost(postId),
+    onSuccess: (_data, postId) => {
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.FEED, refetchType: 'none' })
+      qc.invalidateQueries({ queryKey: ['posts', 'community'], refetchType: 'none' })
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.POST(postId), refetchType: 'none' })
     },
   })
 }
@@ -231,7 +336,6 @@ export function useAddComment() {
     mutationFn: postsApi.addComment,
     onSuccess: (_, variables) => {
       qc.invalidateQueries({ queryKey: QUERY_KEYS.COMMENTS(variables.post_id) })
-      // Feed only needs to know comments_count changed — mark stale, don't force refetch
       qc.invalidateQueries({ queryKey: QUERY_KEYS.FEED, refetchType: 'none' })
     },
   })

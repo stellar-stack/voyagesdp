@@ -1,7 +1,8 @@
 import { useParams, Link } from 'react-router-dom'
-import { MapPin, Calendar, Edit } from 'lucide-react'
+import { MapPin, Calendar, Edit, Users } from 'lucide-react'
 import { useUserProfile } from '@/queries/auth.queries'
 import { useUserPostsQuery } from '@/queries/posts.queries'
+import { useUserCommunities } from '@/queries/communities.queries'
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll'
 import { useAuthStore } from '@/store/auth.store'
 import { UserAvatar } from '@/components/user/UserAvatar'
@@ -18,6 +19,7 @@ export default function ProfilePage() {
   const currentUser = useAuthStore((s) => s.user)
   const { data: profile, isLoading: profileLoading } = useUserProfile(username!)
   const { data: postsData, isLoading: postsLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useUserPostsQuery(username!)
+  const { data: userCommunities } = useUserCommunities(username!)
   const sentinelRef = useInfiniteScroll(() => {
     if (hasNextPage && !isFetchingNextPage) fetchNextPage()
   }, !!hasNextPage)
@@ -129,6 +131,35 @@ export default function ProfilePage() {
           </div>
         </div>
       </div>
+
+      {/* Enrolled Communities */}
+      {userCommunities && userCommunities.length > 0 && (
+        <div className="card p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <Users size={16} className="text-accent" />
+            <h2 className="font-semibold text-text-primary text-sm">
+              {isOwnProfile ? 'My Communities' : 'Communities'}
+            </h2>
+            <span className="text-xs text-text-muted">({userCommunities.length})</span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {userCommunities.map((community) => (
+              <Link
+                key={community.id}
+                to={`/communities/${community.id}`}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-bg-secondary hover:bg-surface-hover transition-colors text-sm text-text-secondary hover:text-text-primary"
+              >
+                <div className="h-4 w-4 rounded bg-accent/20 flex items-center justify-center shrink-0">
+                  <span className="text-accent text-xs font-bold leading-none">
+                    {community.name.charAt(0).toUpperCase()}
+                  </span>
+                </div>
+                <span className="truncate max-w-[120px]">{community.name}</span>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Posts */}
       <h2 className="font-semibold text-text-primary px-1">Posts</h2>

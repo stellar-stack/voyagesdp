@@ -18,6 +18,8 @@ from .pagination import CommunityPagination
 @permission_classes([IsAuthenticated])
 @parser_classes([MultiPartParser, FormParser, JSONParser])
 def create_community(request):
+    if request.user.role != 'ADMIN':
+        return Response({'detail': 'Only admins can create communities.'}, status=403)
     serializer = CommunityDetailSerializer(data=request.data)
     if serializer.is_valid():
         community = serializer.save(created_by=request.user)
@@ -50,13 +52,25 @@ def community_detail(request, id):
 def update_community(request, id):
     community = get_object_or_404(Community, id=id)
 
-    if community.created_by != request.user and request.user.role not in ('ADMIN',):
-        return Response({'detail': 'Only the community creator or an admin can update this.'}, status=403)
+    if request.user.role != 'ADMIN':
+        return Response({'detail': 'Only admins can update communities.'}, status=403)
 
     serializer = CommunityDetailSerializer(community, data=request.data, partial=True)
     serializer.is_valid(raise_exception=True)
     serializer.save()
     return Response(serializer.data)
+
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def delete_community(request, id):
+    community = get_object_or_404(Community, id=id)
+
+    if request.user.role != 'ADMIN':
+        return Response({'detail': 'Only admins can delete communities.'}, status=403)
+
+    community.delete()
+    return Response(status=204)
 
 
 @api_view(['POST'])
@@ -94,12 +108,21 @@ def my_communities(request):
     return Response(serializer.data)
 
 
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def user_communities(request, username):
+    user = get_object_or_404(User, username=username, is_deleted=False)
+    communities = Community.objects.filter(members__user=user).distinct()
+    serializer = CommunityListSerializer(communities, many=True, context={'request': request})
+    return Response(serializer.data)
+
+
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def assign_moderator(request, id):
     community = get_object_or_404(Community, id=id)
 
-    if community.created_by != request.user and request.user.role != 'ADMIN':
+    if request.user.role != 'ADMIN':
         return Response({'detail': 'Not allowed'}, status=403)
 
     username = request.data.get('username')
@@ -117,7 +140,7 @@ def assign_moderator(request, id):
 def remove_moderator(request, id, user_id):
     community = get_object_or_404(Community, id=id)
 
-    if community.created_by != request.user and request.user.role != 'ADMIN':
+    if request.user.role != 'ADMIN':
         return Response({'detail': 'Not allowed'}, status=403)
 
     mod = get_object_or_404(CommunityModerator, community=community, user_id=user_id)

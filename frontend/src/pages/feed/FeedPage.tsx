@@ -5,6 +5,7 @@ import { useInfiniteScroll } from '@/hooks/useInfiniteScroll'
 import { PostCard } from '@/components/post/PostCard'
 import { PostSkeleton } from '@/components/post/PostSkeleton'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { Link } from 'react-router-dom'
 
 export default function FeedPage() {
   const { openModal } = useUIStore()
@@ -23,10 +24,10 @@ export default function FeedPage() {
         onClick={() => openModal('create-post')}
         className="card w-full flex items-center gap-3 p-4 hover:bg-surface-hover transition-colors cursor-pointer text-left"
       >
-        <div className="h-10 w-10 rounded-full bg-accent-muted flex items-center justify-center">
+        <div className="h-10 w-10 rounded-full bg-accent-muted flex items-center justify-center shrink-0">
           <PenSquare size={18} className="text-accent" />
         </div>
-        <span className="text-text-muted text-sm">What's on your mind?</span>
+        <span className="text-text-muted text-sm">What&apos;s on your mind?</span>
       </button>
 
       {/* Skeletons */}
@@ -36,16 +37,16 @@ export default function FeedPage() {
         </div>
       )}
 
-      {/* Posts */}
+      {/* Empty state */}
       {!isLoading && posts.length === 0 && (
         <EmptyState
           icon={Newspaper}
           title="Your feed is empty"
-          description="Follow people or join communities to see posts here."
+          description="Join communities to see posts here."
           action={
-            <button onClick={() => openModal('create-post')} className="btn-primary">
-              Create your first post
-            </button>
+            <Link to="/communities" className="btn-primary">
+              Browse Communities
+            </Link>
           }
         />
       )}
@@ -64,7 +65,6 @@ export default function FeedPage() {
           {[1, 2].map((i) => <PostSkeleton key={i} />)}
         </div>
       )}
-
     </div>
   )
 }

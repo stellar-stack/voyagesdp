@@ -8,7 +8,7 @@ export const communitiesApi = {
   },
 
   getMine: async () => {
-    const res = await api.get<PaginatedResponse<CommunityList>>('/communities/me/')
+    const res = await api.get<CommunityList[]>('/communities/me/')
     return res.data
   },
 
@@ -29,6 +29,10 @@ export const communitiesApi = {
     return res.data
   },
 
+  delete: async (id: number) => {
+    await api.delete(`/communities/${id}/delete/`)
+  },
+
   toggleJoin: async (communityId: number) => {
     const res = await api.post<{ joined: boolean }>('/communities/join/', { community_id: communityId })
     return res.data
@@ -38,6 +42,11 @@ export const communitiesApi = {
     const res = await api.get<PaginatedResponse<UserPublic>>(
       `/communities/${id}/members/?page=${page}`
     )
+    return res.data
+  },
+
+  getUserCommunities: async (username: string) => {
+    const res = await api.get<CommunityList[]>(`/communities/user/${username}/`)
     return res.data
   },
 

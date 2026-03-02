@@ -1,45 +1,85 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   MessageCircle, Share2, Bookmark, BookmarkCheck,
-  MoreHorizontal, Edit, Trash2, Flag,
+  MoreHorizontal, Edit, Trash2, Flag, ThumbsUp,
+  Copy, ExternalLink,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuthStore } from '@/store/auth.store'
-import { useToggleReaction, useToggleBookmark, useDeletePost } from '@/queries/posts.queries'
+import { useToggleReaction, useToggleBookmark, useDeletePost, useSharePost } from '@/queries/posts.queries'
 import { useUIStore } from '@/store/ui.store'
 import { UserAvatar } from '@/components/user/UserAvatar'
-import { ReactionPicker } from './ReactionPicker'
-import { REACTION_EMOJIS } from '@/lib/constants'
 import { cn, formatDate, formatCount } from '@/lib/utils'
-import type { Post, ReactionType } from '@/types'
+import type { Post } from '@/types'
 
 interface PostCardProps {
   post: Post
 }
 
+const shareMenuVariants = {
+  hidden: { opacity: 0, scale: 0.95, y: -4 },
+  visible: { opacity: 1, scale: 1, y: 0 },
+}
+
 export function PostCard({ post }: PostCardProps) {
   const currentUser = useAuthStore((s) => s.user)
   const { openModal } = useUIStore()
-  const [showReactions, setShowReactions] = useState(false)
   const [showMenu, setShowMenu] = useState(false)
+  const [showShareMenu, setShowShareMenu] = useState(false)
+  const shareMenuRef = useRef<HTMLDivElement>(null)
 
   const { mutate: toggleReaction } = useToggleReaction(post.id)
   const { mutate: toggleBookmark } = useToggleBookmark()
+  const { mutate: sharePost } = useSharePost()
   const { mutate: deletePost } = useDeletePost()
 
   const isOwner = currentUser?.username === post.user.username
   const isAdminOrMod = currentUser?.role === 'ADMIN' || currentUser?.role === 'MODERATOR'
+  const isLiked = post.user_reaction === 'LIKE'
 
-  const handleReact = (type: ReactionType) => {
-    toggleReaction(type)
-    setShowReactions(false)
+  // Close share menu when clicking outside
+  useEffect(() => {
+    if (!showShareMenu) return
+    const handler = (e: MouseEvent) => {
+      if (shareMenuRef.current && !shareMenuRef.current.contains(e.target as Node)) {
+        setShowShareMenu(false)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [showShareMenu])
+
+  const handleLike = () => {
+    toggleReaction(isLiked ? null : 'LIKE')
   }
 
-  const handleRemoveReaction = () => {
-    toggleReaction(null)
-    setShowReactions(false)
+  const shareUrl = `${window.location.origin}/post/${post.id}`
+  const shareText = post.caption ? `${post.caption} — ` : ''
+
+  const handleShareOption = (action: 'whatsapp' | 'twitter' | 'copy') => {
+    setShowShareMenu(false)
+    // Record the share in backend (idempotent get_or_create)
+    sharePost(post.id)
+
+    if (action === 'whatsapp') {
+      window.open(
+        `https://wa.me/?text=${encodeURIComponent(shareText + shareUrl)}`,
+        '_blank',
+        'noopener,noreferrer'
+      )
+    } else if (action === 'twitter') {
+      window.open(
+        `https://twitter.com/intent/tweet?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareText)}`,
+        '_blank',
+        'noopener,noreferrer'
+      )
+    } else if (action === 'copy') {
+      navigator.clipboard.writeText(shareUrl).then(() => {
+        toast.success('Link copied!')
+      })
+    }
   }
 
   const handleDelete = () => {
@@ -49,12 +89,6 @@ export function PostCard({ post }: PostCardProps) {
       onError: () => toast.error('Failed to delete post'),
     })
   }
-
-  // Show top 2 reaction types
-  const topReactions = Object.entries(post.reactions_summary)
-    .sort(([, a], [, b]) => b - a)
-    .slice(0, 2)
-    .map(([type]) => REACTION_EMOJIS[type as ReactionType]?.emoji)
 
   return (
     <motion.article
@@ -97,9 +131,11 @@ export function PostCard({ post }: PostCardProps) {
           <AnimatePresence>
             {showMenu && (
               <motion.div
-                initial={{ opacity: 0, scale: 0.95, y: -4 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95, y: -4 }}
+                variants={shareMenuVariants}
+                initial="hidden"
+                animate="visible"
+                exit="hidden"
+                transition={{ duration: 0.12 }}
                 className="absolute right-0 top-8 z-50 w-40 rounded-xl border border-border bg-bg-card shadow-xl py-1"
                 onMouseLeave={() => setShowMenu(false)}
               >
@@ -164,48 +200,22 @@ export function PostCard({ post }: PostCardProps) {
 
       {/* Actions */}
       <div className="flex items-center gap-1 pt-1">
-        {/* Reaction */}
-        <div className="relative">
-          <button
-            onMouseEnter={() => setShowReactions(true)}
-            onMouseLeave={() => setShowReactions(false)}
-            onClick={() => {
-              if (post.user_reaction) handleRemoveReaction()
-              else setShowReactions(true)
-            }}
-            className={cn(
-              'flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm transition-colors',
-              post.user_reaction
-                ? 'text-accent bg-accent-muted'
-                : 'text-text-muted hover:bg-surface-hover'
-            )}
-          >
-            <span className="text-base leading-none">
-              {post.user_reaction
-                ? REACTION_EMOJIS[post.user_reaction].emoji
-                : topReactions.length > 0
-                  ? topReactions[0]
-                  : '👍'}
-            </span>
-            {post.reactions_count > 0 && (
-              <span>{formatCount(post.reactions_count)}</span>
-            )}
-          </button>
-          <AnimatePresence>
-            {showReactions && (
-              <div
-                onMouseEnter={() => setShowReactions(true)}
-                onMouseLeave={() => setShowReactions(false)}
-              >
-                <ReactionPicker
-                  currentReaction={post.user_reaction}
-                  onSelect={handleReact}
-                  onRemove={handleRemoveReaction}
-                />
-              </div>
-            )}
-          </AnimatePresence>
-        </div>
+        {/* Like */}
+        <motion.button
+          whileTap={{ scale: 0.85 }}
+          onClick={handleLike}
+          className={cn(
+            'flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm transition-colors',
+            isLiked
+              ? 'text-accent bg-accent-muted'
+              : 'text-text-muted hover:bg-surface-hover'
+          )}
+        >
+          <ThumbsUp size={16} className={isLiked ? 'fill-accent' : ''} />
+          {post.reactions_count > 0 && (
+            <span>{formatCount(post.reactions_count)}</span>
+          )}
+        </motion.button>
 
         {/* Comment */}
         <Link
@@ -216,11 +226,64 @@ export function PostCard({ post }: PostCardProps) {
           {post.comments_count > 0 && <span>{formatCount(post.comments_count)}</span>}
         </Link>
 
-        {/* Share */}
-        <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm text-text-muted hover:bg-surface-hover transition-colors">
-          <Share2 size={16} />
-          {post.shares_count > 0 && <span>{formatCount(post.shares_count)}</span>}
-        </button>
+        {/* Share — social dropdown */}
+        <div className="relative" ref={shareMenuRef}>
+          <motion.button
+            whileTap={{ scale: 0.85 }}
+            onClick={() => setShowShareMenu((v) => !v)}
+            className={cn(
+              'flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm transition-colors',
+              showShareMenu
+                ? 'text-accent bg-accent-muted'
+                : 'text-text-muted hover:bg-surface-hover'
+            )}
+          >
+            <Share2 size={16} />
+            {post.shares_count > 0 && <span>{formatCount(post.shares_count)}</span>}
+          </motion.button>
+
+          <AnimatePresence>
+            {showShareMenu && (
+              <motion.div
+                variants={shareMenuVariants}
+                initial="hidden"
+                animate="visible"
+                exit="hidden"
+                transition={{ duration: 0.12 }}
+                className="absolute left-0 bottom-full mb-2 z-50 w-48 rounded-xl border border-border bg-bg-card shadow-xl py-1"
+              >
+                {/* WhatsApp */}
+                <button
+                  onClick={() => handleShareOption('whatsapp')}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-text-primary hover:bg-surface-hover"
+                >
+                  <span className="text-base leading-none">💬</span>
+                  <span>WhatsApp</span>
+                  <ExternalLink size={11} className="ml-auto text-text-muted" />
+                </button>
+
+                {/* Twitter / X */}
+                <button
+                  onClick={() => handleShareOption('twitter')}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-text-primary hover:bg-surface-hover"
+                >
+                  <span className="text-base leading-none">𝕏</span>
+                  <span>Twitter / X</span>
+                  <ExternalLink size={11} className="ml-auto text-text-muted" />
+                </button>
+
+                {/* Copy link */}
+                <button
+                  onClick={() => handleShareOption('copy')}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-text-primary hover:bg-surface-hover"
+                >
+                  <Copy size={14} />
+                  <span>Copy Link</span>
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
 
         {/* Bookmark */}
         <motion.button

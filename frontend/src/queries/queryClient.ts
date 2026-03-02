@@ -38,6 +38,7 @@ export const QUERY_KEYS = {
   COMMUNITIES: ['communities'] as const,
   COMMUNITY: (id: number) => ['communities', id] as const,
   MY_COMMUNITIES: ['communities', 'me'] as const,
+  USER_COMMUNITIES: (username: string) => ['communities', 'user', username] as const,
   COMMUNITY_MEMBERS: (id: number) => ['communities', id, 'members'] as const,
 
   // Messages

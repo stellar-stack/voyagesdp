@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Users, Plus, Search } from 'lucide-react'
+import { useAuthStore } from '@/store/auth.store'
 import { useCommunitiesQuery } from '@/queries/communities.queries'
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll'
 import { CommunityCard } from '@/components/community/CommunityCard'
@@ -9,6 +10,8 @@ import { Skeleton } from '@/components/ui/Skeleton'
 
 export default function CommunitiesPage() {
   const navigate = useNavigate()
+  const user = useAuthStore((s) => s.user)
+  const isAdmin = user?.role === 'ADMIN'
   const [search, setSearch] = useState('')
   const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useCommunitiesQuery()
   const sentinelRef = useInfiniteScroll(() => {
@@ -23,12 +26,14 @@ export default function CommunitiesPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold text-text-primary">Communities</h1>
-        <button
-          onClick={() => navigate('/communities/create')}
-          className="btn-primary flex items-center gap-1.5 text-sm"
-        >
-          <Plus size={16} /> Create
-        </button>
+        {isAdmin && (
+          <button
+            onClick={() => navigate('/communities/create')}
+            className="btn-primary flex items-center gap-1.5 text-sm"
+          >
+            <Plus size={16} /> Create
+          </button>
+        )}
       </div>
 
       {/* Search */}
@@ -60,11 +65,13 @@ export default function CommunitiesPage() {
         <EmptyState
           icon={Users}
           title="No communities found"
-          description="Create one to get started!"
+          description={isAdmin ? 'Create one to get started!' : 'No communities exist yet.'}
           action={
-            <button onClick={() => navigate('/communities/create')} className="btn-primary">
-              Create Community
-            </button>
+            isAdmin ? (
+              <button onClick={() => navigate('/communities/create')} className="btn-primary">
+                Create Community
+              </button>
+            ) : undefined
           }
         />
       )}

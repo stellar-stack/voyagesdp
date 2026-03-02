@@ -85,7 +85,9 @@ function AppInner() {
           <Route path="/profile/:username/followers" element={<FollowersPage />} />
           <Route path="/profile/:username/following" element={<FollowingPage />} />
           <Route path="/communities" element={<CommunitiesPage />} />
-          <Route path="/communities/create" element={<CreateCommunityPage />} />
+          <Route element={<RoleGuard roles={['ADMIN']} />}>
+            <Route path="/communities/create" element={<CreateCommunityPage />} />
+          </Route>
           <Route path="/communities/:communityId" element={<CommunityDetailPage />} />
           <Route path="/messages" element={<MessagesPage />} />
           <Route path="/messages/:conversationId" element={<ConversationPage />} />

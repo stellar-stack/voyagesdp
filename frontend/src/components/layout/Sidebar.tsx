@@ -1,14 +1,16 @@
-import { NavLink, useNavigate } from 'react-router-dom'
-import { motion } from 'framer-motion'
+import { useState } from 'react'
+import { NavLink, Link, useNavigate } from 'react-router-dom'
+import { motion, AnimatePresence } from 'framer-motion'
 import {
   Home, Users, MessageCircle, Bell, Bookmark, Search,
-  LogOut, Sun, Moon, Monitor, ShieldCheck,
+  LogOut, Sun, Moon, Monitor, ShieldCheck, ChevronDown, ChevronUp, PenSquare,
 } from 'lucide-react'
 import { useAuthStore } from '@/store/auth.store'
 import { useUIStore } from '@/store/ui.store'
 import { useNotificationStore } from '@/store/notification.store'
 import { useMessageStore } from '@/store/message.store'
 import { useLogout } from '@/queries/auth.queries'
+import { useMyCommunities } from '@/queries/communities.queries'
 import { cn, getInitials, getMediaUrl } from '@/lib/utils'
 
 const navLinks = [
@@ -27,6 +29,9 @@ export default function Sidebar() {
   const unreadMessages = useMessageStore((s) => s.totalUnread)
   const { mutate: logout } = useLogout()
   const navigate = useNavigate()
+  const [communitiesOpen, setCommunitiesOpen] = useState(true)
+
+  const { data: myCommunities } = useMyCommunities()
 
   const cycleTheme = () => {
     const next = theme === 'system' ? 'light' : theme === 'light' ? 'dark' : 'system'
@@ -45,52 +50,105 @@ export default function Sidebar() {
         <span className="text-xl font-bold text-text-primary">Voyage</span>
       </div>
 
-      {/* Navigation */}
-      <nav className="flex-1 space-y-1">
-        {navLinks.map(({ to, icon: Icon, label }) => (
-          <NavLink
-            key={to}
-            to={to}
-            className={({ isActive }) =>
-              cn('sidebar-link relative', isActive && 'active')
-            }
-          >
-            <Icon size={20} />
-            <span>{label}</span>
+      {/* Scrollable nav area */}
+      <div className="flex-1 overflow-y-auto space-y-1 pr-1">
+        {/* Navigation */}
+        <nav className="space-y-1">
+          {navLinks.map(({ to, icon: Icon, label }) => (
+            <NavLink
+              key={to}
+              to={to}
+              className={({ isActive }) =>
+                cn('sidebar-link relative', isActive && 'active')
+              }
+            >
+              <Icon size={20} />
+              <span>{label}</span>
 
-            {/* Unread badge */}
-            {label === 'Notifications' && unreadNotifs > 0 && (
-              <motion.span
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-accent px-1 text-xs text-white"
-              >
-                {unreadNotifs > 99 ? '99+' : unreadNotifs}
-              </motion.span>
-            )}
-            {label === 'Messages' && unreadMessages > 0 && (
-              <motion.span
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-accent px-1 text-xs text-white"
-              >
-                {unreadMessages > 99 ? '99+' : unreadMessages}
-              </motion.span>
-            )}
-          </NavLink>
-        ))}
+              {/* Unread badge */}
+              {label === 'Notifications' && unreadNotifs > 0 && (
+                <motion.span
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-accent px-1 text-xs text-white"
+                >
+                  {unreadNotifs > 99 ? '99+' : unreadNotifs}
+                </motion.span>
+              )}
+              {label === 'Messages' && unreadMessages > 0 && (
+                <motion.span
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-accent px-1 text-xs text-white"
+                >
+                  {unreadMessages > 99 ? '99+' : unreadMessages}
+                </motion.span>
+              )}
+            </NavLink>
+          ))}
 
-        {/* Admin link */}
-        {(user?.role === 'ADMIN' || user?.role === 'MODERATOR') && (
-          <NavLink
-            to="/admin"
-            className={({ isActive }) => cn('sidebar-link', isActive && 'active')}
-          >
-            <ShieldCheck size={20} />
-            <span>Admin</span>
-          </NavLink>
+          {/* Admin link */}
+          {(user?.role === 'ADMIN' || user?.role === 'MODERATOR') && (
+            <NavLink
+              to="/admin"
+              className={({ isActive }) => cn('sidebar-link', isActive && 'active')}
+            >
+              <ShieldCheck size={20} />
+              <span>Admin</span>
+            </NavLink>
+          )}
+        </nav>
+
+        {/* Enrolled Communities */}
+        {myCommunities && myCommunities.length > 0 && (
+          <div className="pt-4">
+            <button
+              onClick={() => setCommunitiesOpen((v) => !v)}
+              className="w-full flex items-center justify-between px-3 py-1.5 text-xs font-semibold text-text-muted uppercase tracking-wide hover:text-text-primary transition-colors"
+            >
+              <span>My Communities</span>
+              {communitiesOpen ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+            </button>
+
+            <AnimatePresence initial={false}>
+              {communitiesOpen && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="overflow-hidden"
+                >
+                  <div className="mt-1 space-y-0.5">
+                    {myCommunities.slice(0, 8).map((community) => (
+                      <Link
+                        key={community.id}
+                        to={`/communities/${community.id}`}
+                        className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm text-text-secondary hover:bg-surface-hover hover:text-text-primary transition-colors truncate"
+                      >
+                        <div className="h-5 w-5 rounded-md bg-accent/20 flex items-center justify-center shrink-0">
+                          <span className="text-accent text-xs font-bold">
+                            {community.name.charAt(0).toUpperCase()}
+                          </span>
+                        </div>
+                        <span className="truncate">{community.name}</span>
+                      </Link>
+                    ))}
+                    {myCommunities.length > 8 && (
+                      <Link
+                        to="/communities"
+                        className="flex items-center px-3 py-1.5 text-xs text-text-muted hover:text-accent transition-colors"
+                      >
+                        +{myCommunities.length - 8} more
+                      </Link>
+                    )}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
         )}
-      </nav>
+      </div>
 
       {/* Bottom section */}
       <div className="space-y-2 pt-4 border-t border-border">
@@ -99,7 +157,8 @@ export default function Sidebar() {
           onClick={() => openModal('create-post')}
           className="btn-primary w-full flex items-center justify-center gap-2"
         >
-          + New Post
+          <PenSquare size={16} />
+          New Post
         </button>
 
         {/* Theme toggle */}

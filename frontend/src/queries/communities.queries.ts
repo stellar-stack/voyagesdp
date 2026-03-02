@@ -20,6 +20,14 @@ export function useMyCommunities() {
   })
 }
 
+export function useUserCommunities(username: string) {
+  return useQuery({
+    queryKey: QUERY_KEYS.USER_COMMUNITIES(username),
+    queryFn: () => communitiesApi.getUserCommunities(username),
+    enabled: !!username,
+  })
+}
+
 export function useCommunityDetail(id: number) {
   return useQuery({
     queryKey: QUERY_KEYS.COMMUNITY(id),
@@ -53,6 +61,18 @@ export function useUpdateCommunity(id: number) {
     mutationFn: (payload: UpdateCommunityPayload) => communitiesApi.update(id, payload),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: QUERY_KEYS.COMMUNITY(id) })
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.COMMUNITIES })
+    },
+  })
+}
+
+export function useDeleteCommunity() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: number) => communitiesApi.delete(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.COMMUNITIES })
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.MY_COMMUNITIES })
     },
   })
 }
