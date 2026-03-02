@@ -27,7 +27,10 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-bg-secondary px-4">
+    <div className="flex min-h-screen items-center justify-center bg-bg-secondary px-4 relative overflow-hidden">
+      {/* Background orbs */}
+      <div className="pointer-events-none absolute -top-32 -left-32 h-80 w-80 rounded-full bg-accent/10 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-32 -right-32 h-80 w-80 rounded-full bg-violet-500/8 blur-3xl" />
       <motion.div
         initial={{ opacity: 0, y: 24 }}
         animate={{ opacity: 1, y: 0 }}
@@ -36,15 +39,16 @@ export default function LoginPage() {
       >
         {/* Header */}
         <div className="mb-8 text-center">
-          <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-accent">
-            <span className="text-white font-bold text-xl">V</span>
+          <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-accent to-violet-600 shadow-lg shadow-accent/20">
+            <span className="text-white font-black text-xl">V</span>
           </div>
-          <h1 className="text-2xl font-bold text-text-primary">Welcome back</h1>
-          <p className="mt-1 text-text-secondary">Sign in to your Voyage account</p>
+          <h1 className="text-3xl font-black text-text-primary tracking-tight">Welcome back</h1>
+          <p className="mt-1.5 text-text-secondary">Sign in to your Voyage account</p>
         </div>
 
         {/* Card */}
-        <div className="card p-8 space-y-6">
+        <div className="card p-8 space-y-6 relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-br from-accent/3 to-violet-500/3 pointer-events-none" />
           {/* OAuth buttons */}
           <div className="space-y-3">
             <GoogleOAuthButton />
@@ -93,7 +97,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={isPending}
-              className="btn-primary w-full flex items-center justify-center gap-2"
+              className="btn-gradient w-full flex items-center justify-center gap-2"
             >
               {isPending && (
                 <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />

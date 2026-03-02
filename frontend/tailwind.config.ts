@@ -33,6 +33,13 @@ const config: Config = {
           DEFAULT: 'rgb(var(--color-danger) / <alpha-value>)',
           hover: 'rgb(var(--color-danger-hover) / <alpha-value>)',
         },
+        violet: {
+          DEFAULT: 'rgb(var(--color-violet) / <alpha-value>)',
+        },
+        success: {
+          DEFAULT: 'rgb(var(--color-success) / <alpha-value>)',
+          muted: 'rgb(var(--color-success-muted) / <alpha-value>)',
+        },
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],

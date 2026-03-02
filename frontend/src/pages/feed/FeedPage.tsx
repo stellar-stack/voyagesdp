@@ -1,14 +1,17 @@
-import { Newspaper, PenSquare } from 'lucide-react'
+import { Newspaper, Image, Video } from 'lucide-react'
 import { useFeedQuery } from '@/queries/posts.queries'
 import { useUIStore } from '@/store/ui.store'
+import { useAuthStore } from '@/store/auth.store'
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll'
 import { PostCard } from '@/components/post/PostCard'
 import { PostSkeleton } from '@/components/post/PostSkeleton'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { UserAvatar } from '@/components/user/UserAvatar'
 import { Link } from 'react-router-dom'
 
 export default function FeedPage() {
   const { openModal } = useUIStore()
+  const user = useAuthStore((s) => s.user)
   const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useFeedQuery()
 
   const sentinelRef = useInfiniteScroll(() => {
@@ -22,12 +25,20 @@ export default function FeedPage() {
       {/* Create post trigger */}
       <button
         onClick={() => openModal('create-post')}
-        className="card w-full flex items-center gap-3 p-4 hover:bg-surface-hover transition-colors cursor-pointer text-left"
+        className="card w-full flex items-center gap-3.5 p-4 hover:bg-surface-hover hover:shadow-sm transition-all duration-200 cursor-pointer text-left"
       >
-        <div className="h-10 w-10 rounded-full bg-accent-muted flex items-center justify-center shrink-0">
-          <PenSquare size={18} className="text-accent" />
+        {user && <UserAvatar user={user} size="md" />}
+        <div className="flex-1">
+          <span className="text-text-muted text-sm">What&apos;s on your mind?</span>
         </div>
-        <span className="text-text-muted text-sm">What&apos;s on your mind?</span>
+        <div className="flex gap-1.5 shrink-0">
+          <div className="p-1.5 rounded-lg bg-accent-muted text-accent">
+            <Image size={15} />
+          </div>
+          <div className="p-1.5 rounded-lg bg-violet-500/10 text-violet-500">
+            <Video size={15} />
+          </div>
+        </div>
       </button>
 
       {/* Skeletons */}
@@ -42,9 +53,9 @@ export default function FeedPage() {
         <EmptyState
           icon={Newspaper}
           title="Your feed is empty"
-          description="Join communities to see posts here."
+          description="Join communities to see posts from people who share your interests."
           action={
-            <Link to="/communities" className="btn-primary">
+            <Link to="/communities" className="btn-gradient text-sm">
               Browse Communities
             </Link>
           }

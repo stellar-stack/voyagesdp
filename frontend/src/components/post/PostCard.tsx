@@ -18,7 +18,7 @@ interface PostCardProps {
   post: Post
 }
 
-const shareMenuVariants = {
+const menuVariants = {
   hidden: { opacity: 0, scale: 0.95, y: -4 },
   visible: { opacity: 1, scale: 1, y: 0 },
 }
@@ -96,24 +96,24 @@ export function PostCard({ post }: PostCardProps) {
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
       transition={{ duration: 0.25 }}
-      className="card-hover p-4 space-y-3"
+      className="card-hover p-5 space-y-3.5"
     >
       {/* Header */}
-      <div className="flex items-start justify-between">
-        <Link to={`/profile/${post.user.username}`} className="flex items-center gap-2.5">
+      <div className="flex items-start justify-between gap-3">
+        <Link to={`/profile/${post.user.username}`} className="flex items-center gap-3">
           <UserAvatar user={post.user} size="md" />
           <div>
-            <p className="font-semibold text-sm text-text-primary hover:underline">
+            <p className="font-semibold text-sm text-text-primary hover:text-accent transition-colors leading-tight">
               {post.user.first_name} {post.user.last_name}
             </p>
-            <div className="flex items-center gap-1.5 text-xs text-text-muted">
+            <div className="flex items-center flex-wrap gap-1.5 text-xs text-text-muted mt-0.5">
               <span>@{post.user.username}</span>
               <span>·</span>
               <span>{formatDate(post.created_at)}</span>
               {post.community && (
                 <>
                   <span>·</span>
-                  <span className="text-accent font-medium">c/{post.community}</span>
+                  <span className="chip-accent py-0.5">c/{post.community}</span>
                 </>
               )}
             </div>
@@ -121,7 +121,7 @@ export function PostCard({ post }: PostCardProps) {
         </Link>
 
         {/* 3-dot menu */}
-        <div className="relative">
+        <div className="relative shrink-0">
           <button
             onClick={() => setShowMenu((s) => !s)}
             className="p-1.5 rounded-lg hover:bg-surface-hover text-text-muted transition-colors"
@@ -131,12 +131,12 @@ export function PostCard({ post }: PostCardProps) {
           <AnimatePresence>
             {showMenu && (
               <motion.div
-                variants={shareMenuVariants}
+                variants={menuVariants}
                 initial="hidden"
                 animate="visible"
                 exit="hidden"
                 transition={{ duration: 0.12 }}
-                className="absolute right-0 top-8 z-50 w-40 rounded-xl border border-border bg-bg-card shadow-xl py-1"
+                className="absolute right-0 top-8 z-50 w-40 rounded-2xl border border-border bg-bg-card shadow-2xl shadow-black/10 py-1"
                 onMouseLeave={() => setShowMenu(false)}
               >
                 {(isOwner || isAdminOrMod) && (
@@ -173,10 +173,10 @@ export function PostCard({ post }: PostCardProps) {
 
       {/* Content */}
       {post.caption && (
-        <p className="font-medium text-text-primary text-sm">{post.caption}</p>
+        <p className="font-semibold text-text-primary text-sm leading-snug">{post.caption}</p>
       )}
       {post.content && (
-        <p className="text-text-secondary text-sm leading-relaxed whitespace-pre-wrap">
+        <p className="text-text-secondary text-sm leading-[1.7] whitespace-pre-wrap">
           {post.content}
         </p>
       )}
@@ -186,7 +186,7 @@ export function PostCard({ post }: PostCardProps) {
         <img
           src={post.image}
           alt={post.caption || 'Post image'}
-          className="w-full max-h-80 object-cover rounded-xl border border-border"
+          className="w-full max-h-80 object-cover rounded-2xl border border-border shadow-sm"
           loading="lazy"
         />
       )}
@@ -194,21 +194,21 @@ export function PostCard({ post }: PostCardProps) {
         <video
           src={post.video}
           controls
-          className="w-full max-h-80 rounded-xl border border-border"
+          className="w-full max-h-80 rounded-2xl border border-border shadow-sm"
         />
       )}
 
       {/* Actions */}
-      <div className="flex items-center gap-1 pt-1">
+      <div className="flex items-center gap-0.5 pt-1 -mx-1.5">
         {/* Like */}
         <motion.button
           whileTap={{ scale: 0.85 }}
           onClick={handleLike}
           className={cn(
-            'flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm transition-colors',
+            'flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm transition-colors',
             isLiked
-              ? 'text-accent bg-accent-muted'
-              : 'text-text-muted hover:bg-surface-hover'
+              ? 'text-accent bg-accent-muted font-semibold'
+              : 'text-text-muted hover:bg-surface-hover hover:text-text-primary'
           )}
         >
           <ThumbsUp size={16} className={isLiked ? 'fill-accent' : ''} />
@@ -220,7 +220,7 @@ export function PostCard({ post }: PostCardProps) {
         {/* Comment */}
         <Link
           to={`/post/${post.id}`}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm text-text-muted hover:bg-surface-hover transition-colors"
+          className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm text-text-muted hover:bg-surface-hover hover:text-text-primary transition-colors"
         >
           <MessageCircle size={16} />
           {post.comments_count > 0 && <span>{formatCount(post.comments_count)}</span>}
@@ -235,7 +235,7 @@ export function PostCard({ post }: PostCardProps) {
               'flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm transition-colors',
               showShareMenu
                 ? 'text-accent bg-accent-muted'
-                : 'text-text-muted hover:bg-surface-hover'
+                : 'text-text-muted hover:bg-surface-hover hover:text-text-primary'
             )}
           >
             <Share2 size={16} />
@@ -245,12 +245,12 @@ export function PostCard({ post }: PostCardProps) {
           <AnimatePresence>
             {showShareMenu && (
               <motion.div
-                variants={shareMenuVariants}
+                variants={menuVariants}
                 initial="hidden"
                 animate="visible"
                 exit="hidden"
                 transition={{ duration: 0.12 }}
-                className="absolute left-0 bottom-full mb-2 z-50 w-48 rounded-xl border border-border bg-bg-card shadow-xl py-1"
+                className="absolute left-0 bottom-full mb-2 z-50 w-48 rounded-2xl border border-border bg-bg-card shadow-2xl shadow-black/10 py-1"
               >
                 {/* WhatsApp */}
                 <button
@@ -290,8 +290,8 @@ export function PostCard({ post }: PostCardProps) {
           whileTap={{ scale: 0.85 }}
           onClick={() => toggleBookmark(post.id)}
           className={cn(
-            'ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm transition-colors',
-            post.is_bookmarked ? 'text-accent' : 'text-text-muted hover:bg-surface-hover'
+            'ml-auto flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm transition-colors',
+            post.is_bookmarked ? 'text-accent bg-accent-muted' : 'text-text-muted hover:bg-surface-hover hover:text-text-primary'
           )}
         >
           {post.is_bookmarked ? <BookmarkCheck size={16} /> : <Bookmark size={16} />}

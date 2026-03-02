@@ -7,51 +7,61 @@
    ===================== */
 
 :root {
-  /* Light theme */
+  /* Light theme — warm, clean, educational */
   --color-bg-primary: 255 255 255;
-  --color-bg-secondary: 248 250 252;
+  --color-bg-secondary: 247 247 248;
   --color-bg-card: 255 255 255;
   --color-bg-elevated: 255 255 255;
 
-  --color-text-primary: 15 23 42;
-  --color-text-secondary: 71 85 105;
-  --color-text-muted: 148 163 184;
+  --color-text-primary: 9 9 11;
+  --color-text-secondary: 63 63 70;
+  --color-text-muted: 161 161 170;
 
-  --color-border: 226 232 240;
-  --color-border-subtle: 241 245 249;
+  --color-border: 228 228 231;
+  --color-border-subtle: 244 244 245;
 
   --color-accent: 99 102 241;
   --color-accent-hover: 79 70 229;
   --color-accent-muted: 238 242 255;
 
-  --color-surface-hover: 248 250 252;
+  --color-violet: 139 92 246;
+
+  --color-surface-hover: 244 244 245;
 
   --color-danger: 239 68 68;
   --color-danger-hover: 220 38 38;
+
+  --color-success: 16 185 129;
+  --color-success-muted: 209 250 229;
 }
 
 .dark {
-  /* Dark theme — Vercel/Linear aesthetic */
-  --color-bg-primary: 9 9 11;
-  --color-bg-secondary: 18 18 21;
-  --color-bg-card: 24 24 27;
-  --color-bg-elevated: 30 30 35;
+  /* Dark theme — warm Apple-inspired blacks */
+  --color-bg-primary: 8 8 8;
+  --color-bg-secondary: 12 12 12;
+  --color-bg-card: 18 18 18;
+  --color-bg-elevated: 28 28 28;
 
   --color-text-primary: 250 250 250;
   --color-text-secondary: 161 161 170;
-  --color-text-muted: 82 82 91;
+  --color-text-muted: 71 71 79;
 
   --color-border: 39 39 42;
-  --color-border-subtle: 28 28 32;
+  --color-border-subtle: 24 24 27;
 
   --color-accent: 129 140 248;
   --color-accent-hover: 165 180 252;
   --color-accent-muted: 30 27 75;
 
+  --color-violet: 167 139 250;
+
   --color-surface-hover: 39 39 42;
 
   --color-danger: 248 113 113;
   --color-danger-hover: 252 165 165;
+
+  --color-success: 52 211 153;
+  --color-success-muted: 6 78 59;
 }
 
 /* =====================
@@ -85,16 +95,17 @@
     outline-offset: 2px;
   }
 
-  /* Custom scrollbar */
+  /* Custom scrollbar — thin and minimal */
   ::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
+    width: 5px;
+    height: 5px;
   }
   ::-webkit-scrollbar-track {
     background: transparent;
   }
   ::-webkit-scrollbar-thumb {
-    @apply bg-border rounded-full;
+    background: rgb(var(--color-border));
+    border-radius: 999px;
   }
   ::-webkit-scrollbar-thumb:hover {
     background: rgb(var(--color-text-muted));
@@ -106,26 +117,39 @@
    ===================== */
 
 @layer components {
+  /* ── Cards ── */
   .card {
     @apply bg-bg-card border border-border rounded-2xl;
   }
 
   .card-hover {
-    @apply card transition-all duration-200 hover:shadow-lg hover:border-border/80;
+    @apply card transition-all duration-200
+           hover:shadow-md hover:shadow-black/[0.06]
+           hover:-translate-y-0.5 cursor-pointer;
   }
 
   .glass {
-    @apply bg-bg-card/80 backdrop-blur-md border border-border/60;
+    @apply bg-bg-card/80 backdrop-blur-xl border border-border/50;
   }
 
+  /* ── Buttons ── */
   .btn-primary {
-    @apply bg-accent text-white font-medium px-4 py-2 rounded-xl
+    @apply bg-accent text-white font-semibold px-4 py-2 rounded-xl
            hover:bg-accent-hover active:scale-95 transition-all duration-150
            disabled:opacity-50 disabled:cursor-not-allowed;
   }
 
+  .btn-gradient {
+    @apply text-white font-semibold px-4 py-2.5 rounded-xl
+           bg-gradient-to-r from-accent to-violet-600
+           shadow-md shadow-accent/20
+           hover:shadow-lg hover:shadow-accent/30 hover:-translate-y-0.5
+           active:scale-95 transition-all duration-200
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
   .btn-secondary {
-    @apply bg-surface-hover text-text-primary font-medium px-4 py-2 rounded-xl
+    @apply bg-surface-hover text-text-primary font-semibold px-4 py-2 rounded-xl
            hover:bg-border active:scale-95 transition-all duration-150
            disabled:opacity-50 disabled:cursor-not-allowed;
   }
@@ -137,10 +161,16 @@
   }
 
   .btn-danger {
-    @apply bg-danger text-white font-medium px-4 py-2 rounded-xl
+    @apply bg-danger text-white font-semibold px-4 py-2 rounded-xl
            hover:bg-danger-hover active:scale-95 transition-all duration-150;
   }
 
+  .btn-success {
+    @apply bg-success text-white font-semibold px-4 py-2 rounded-xl
+           hover:opacity-90 active:scale-95 transition-all duration-150;
+  }
+
+  /* ── Inputs ── */
   .input-base {
     @apply w-full bg-bg-secondary border border-border rounded-xl px-4 py-2.5
            text-text-primary placeholder:text-text-muted
@@ -148,6 +178,7 @@
            transition-all duration-150;
   }
 
+  /* ── Navigation ── */
   .sidebar-link {
     @apply flex items-center gap-3 px-3 py-2.5 rounded-xl text-text-secondary
            hover:bg-surface-hover hover:text-text-primary transition-all duration-150
@@ -156,8 +187,40 @@
 
   .sidebar-link.active {
     @apply bg-accent-muted text-accent;
+    box-shadow: inset 3px 0 0 rgb(var(--color-accent));
   }
 
+  /* ── Chips / Tags ── */
+  .chip {
+    @apply inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold;
+  }
+
+  .chip-accent {
+    @apply chip bg-accent-muted text-accent;
+  }
+
+  .chip-muted {
+    @apply chip bg-surface-hover text-text-muted;
+  }
+
+  .chip-success {
+    @apply chip bg-success-muted text-success;
+  }
+
+  /* ── Typography ── */
+  .gradient-text {
+    @apply bg-gradient-to-r from-accent to-violet-500 bg-clip-text text-transparent;
+  }
+
+  .page-title {
+    @apply text-2xl font-bold text-text-primary tracking-tight;
+  }
+
+  .section-label {
+    @apply text-xs font-semibold text-text-muted uppercase tracking-widest;
+  }
+
+  /* ── Forms ── */
   .label {
     @apply mb-1.5 block text-sm font-medium text-text-secondary;
   }

@@ -18,7 +18,7 @@ export default function NotificationsPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold text-text-primary">Notifications</h1>
+        <h1 className="page-title">Notifications</h1>
         {hasUnread && (
           <button
             onClick={() => markAllRead()}

@@ -15,7 +15,10 @@ export default function BookmarksPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-bold text-text-primary">Bookmarks</h1>
+      <div>
+        <h1 className="page-title">Bookmarks</h1>
+        <p className="text-sm text-text-muted mt-1">Posts you've saved for later</p>
+      </div>
 
       {isLoading && (
         <div className="space-y-4">{[1, 2, 3].map((i) => <PostSkeleton key={i} />)}</div>

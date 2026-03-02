@@ -1,5 +1,18 @@
 import { useParams, Link } from 'react-router-dom'
 import { MapPin, Calendar, Edit, Users } from 'lucide-react'
+import { cn } from '@/lib/utils'
+
+const communityColors = [
+  'from-blue-500 to-cyan-500',
+  'from-violet-500 to-purple-500',
+  'from-amber-500 to-orange-400',
+  'from-emerald-500 to-teal-500',
+  'from-pink-500 to-rose-500',
+  'from-indigo-500 to-blue-600',
+]
+function getCommunityGradient(name: string) {
+  return communityColors[name.charCodeAt(0) % communityColors.length]
+}
 import { useUserProfile } from '@/queries/auth.queries'
 import { useUserPostsQuery } from '@/queries/posts.queries'
 import { useUserCommunities } from '@/queries/communities.queries'
@@ -53,7 +66,7 @@ export default function ProfilePage() {
       {/* Profile card */}
       <div className="card overflow-hidden">
         {/* Banner */}
-        <div className="h-24 bg-gradient-to-br from-accent/40 to-purple-500/20" />
+        <div className="h-28 bg-gradient-to-br from-accent/50 via-violet-500/20 to-purple-500/10" />
 
         <div className="px-5 pb-5">
           {/* Avatar + actions */}
@@ -76,22 +89,20 @@ export default function ProfilePage() {
 
           {/* Name + role */}
           <div className="mb-3">
-            <div className="flex items-center gap-2">
-              <h1 className="text-xl font-bold text-text-primary">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h1 className="text-xl font-bold text-text-primary tracking-tight">
                 {profile.first_name} {profile.last_name}
               </h1>
               {profile.role !== 'USER' && (
-                <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-accent-muted text-accent">
-                  {profile.role}
-                </span>
+                <span className="chip-accent">{profile.role}</span>
               )}
             </div>
-            <p className="text-text-muted text-sm">@{profile.username}</p>
+            <p className="text-text-muted text-sm mt-0.5">@{profile.username}</p>
           </div>
 
           {/* Bio */}
           {profile.bio && (
-            <p className="text-text-secondary text-sm mb-3">{profile.bio}</p>
+            <p className="text-text-secondary text-sm mb-4 leading-[1.7]">{profile.bio}</p>
           )}
 
           {/* Meta */}
@@ -109,24 +120,21 @@ export default function ProfilePage() {
           </div>
 
           {/* Follow counts */}
-          <div className="flex gap-5 text-sm">
+          <div className="flex items-center gap-6">
             <Link
               to={`/profile/${username}/followers`}
-              className="hover:underline flex items-center gap-1"
+              className="text-center hover:text-accent transition-colors"
             >
-              <span className="font-bold text-text-primary">
-                {formatCount(profile.followers_count)}
-              </span>
-              <span className="text-text-muted">Followers</span>
+              <p className="text-lg font-bold text-text-primary">{formatCount(profile.followers_count)}</p>
+              <p className="text-xs text-text-muted">Followers</p>
             </Link>
+            <div className="h-8 w-px bg-border" />
             <Link
               to={`/profile/${username}/following`}
-              className="hover:underline flex items-center gap-1"
+              className="text-center hover:text-accent transition-colors"
             >
-              <span className="font-bold text-text-primary">
-                {formatCount(profile.following_count)}
-              </span>
-              <span className="text-text-muted">Following</span>
+              <p className="text-lg font-bold text-text-primary">{formatCount(profile.following_count)}</p>
+              <p className="text-xs text-text-muted">Following</p>
             </Link>
           </div>
         </div>
@@ -134,27 +142,30 @@ export default function ProfilePage() {
 
       {/* Enrolled Communities */}
       {userCommunities && userCommunities.length > 0 && (
-        <div className="card p-4">
-          <div className="flex items-center gap-2 mb-3">
+        <div className="card p-5">
+          <div className="flex items-center gap-2 mb-4">
             <Users size={16} className="text-accent" />
             <h2 className="font-semibold text-text-primary text-sm">
               {isOwnProfile ? 'My Communities' : 'Communities'}
             </h2>
-            <span className="text-xs text-text-muted">({userCommunities.length})</span>
+            <span className="chip-muted">{userCommunities.length}</span>
           </div>
           <div className="flex flex-wrap gap-2">
             {userCommunities.map((community) => (
               <Link
                 key={community.id}
                 to={`/communities/${community.id}`}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-bg-secondary hover:bg-surface-hover transition-colors text-sm text-text-secondary hover:text-text-primary"
+                className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-bg-secondary hover:bg-surface-hover transition-colors text-sm text-text-secondary hover:text-text-primary"
               >
-                <div className="h-4 w-4 rounded bg-accent/20 flex items-center justify-center shrink-0">
-                  <span className="text-accent text-xs font-bold leading-none">
+                <div className={cn(
+                  'h-5 w-5 rounded-md flex items-center justify-center shrink-0 bg-gradient-to-br shadow-sm',
+                  getCommunityGradient(community.name)
+                )}>
+                  <span className="text-white text-[10px] font-bold leading-none">
                     {community.name.charAt(0).toUpperCase()}
                   </span>
                 </div>
-                <span className="truncate max-w-[120px]">{community.name}</span>
+                <span className="truncate max-w-[120px] font-medium">{community.name}</span>
               </Link>
             ))}
           </div>
@@ -162,7 +173,7 @@ export default function ProfilePage() {
       )}
 
       {/* Posts */}
-      <h2 className="font-semibold text-text-primary px-1">Posts</h2>
+      <h2 className="font-semibold text-text-primary px-1 tracking-tight">Posts</h2>
 
       {postsLoading && <div className="space-y-4">{[1, 2].map((i) => <PostSkeleton key={i} />)}</div>}
 

@@ -46,30 +46,30 @@ export default function CommunityDetailPage() {
       {/* Header */}
       <div className="card overflow-hidden">
         {bannerUrl ? (
-          <img src={bannerUrl} alt="banner" className="w-full h-32 object-cover" />
+          <img src={bannerUrl} alt="banner" className="w-full h-36 object-cover" />
         ) : (
-          <div className="h-32 bg-gradient-to-br from-accent/30 to-purple-500/20" />
+          <div className="h-36 bg-gradient-to-br from-accent/40 via-violet-500/20 to-purple-500/10" />
         )}
 
         <div className="p-5">
           <div className="flex items-start justify-between mb-3">
             <div>
-              <h1 className="text-xl font-bold text-text-primary">{community.name}</h1>
-              <div className="flex items-center gap-1.5 text-sm text-text-muted mt-0.5">
-                <Users size={14} />
-                <span>{formatCount(community.members_count)} members</span>
-              </div>
+              <h1 className="text-2xl font-bold text-text-primary tracking-tight">{community.name}</h1>
+              <span className="chip-muted mt-1.5 inline-flex">
+                <Users size={10} />
+                {formatCount(community.members_count)} members
+              </span>
             </div>
             <button
               onClick={() => toggleJoin()}
               disabled={joiningPending}
-              className={community.is_member ? 'btn-secondary text-sm' : 'btn-primary text-sm'}
+              className={community.is_member ? 'btn-secondary text-sm min-w-[72px]' : 'btn-primary text-sm min-w-[72px]'}
             >
               {joiningPending ? '…' : community.is_member ? 'Leave' : 'Join'}
             </button>
           </div>
 
-          <p className="text-text-secondary text-sm">{community.about}</p>
+          <p className="text-text-secondary text-sm leading-[1.7]">{community.about}</p>
 
           {/* Moderators */}
           {community.moderators.length > 0 && (
@@ -107,9 +107,9 @@ export default function CommunityDetailPage() {
       {community.is_member && (
         <button
           onClick={() => openModal('create-post', { communityId: id })}
-          className="card w-full flex items-center gap-3 p-4 hover:bg-surface-hover transition-colors cursor-pointer text-left"
+          className="card w-full flex items-center gap-3.5 p-4 hover:bg-surface-hover hover:shadow-sm transition-all duration-200 cursor-pointer text-left"
         >
-          <div className="h-9 w-9 rounded-full bg-accent-muted flex items-center justify-center shrink-0">
+          <div className="h-9 w-9 rounded-full bg-gradient-to-br from-accent-muted to-violet-500/10 flex items-center justify-center shrink-0">
             <PenSquare size={16} className="text-accent" />
           </div>
           <span className="text-text-muted text-sm">Post something to this community…</span>

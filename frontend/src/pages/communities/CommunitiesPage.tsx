@@ -25,25 +25,28 @@ export default function CommunitiesPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold text-text-primary">Communities</h1>
+        <div>
+          <h1 className="page-title">Communities</h1>
+          <p className="text-sm text-text-muted mt-0.5">Join communities to learn and share together</p>
+        </div>
         {isAdmin && (
           <button
             onClick={() => navigate('/communities/create')}
-            className="btn-primary flex items-center gap-1.5 text-sm"
+            className="btn-gradient flex items-center gap-1.5 text-sm"
           >
-            <Plus size={16} /> Create
+            <Plus size={15} /> Create
           </button>
         )}
       </div>
 
       {/* Search */}
       <div className="relative">
-        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
+        <Search size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-muted" />
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search communities…"
-          className="input-base pl-9"
+          className="input-base pl-11 py-3"
         />
       </div>
 
@@ -51,7 +54,7 @@ export default function CommunitiesPage() {
         <div className="space-y-3">
           {[1, 2, 3].map((i) => (
             <div key={i} className="card p-4 flex gap-4">
-              <Skeleton className="h-12 w-12 rounded-xl shrink-0" />
+              <Skeleton className="h-12 w-12 rounded-2xl shrink-0" />
               <div className="flex-1 space-y-2">
                 <Skeleton className="h-4 w-40" />
                 <Skeleton className="h-3 w-full" />
@@ -76,7 +79,7 @@ export default function CommunitiesPage() {
         />
       )}
 
-      <div className="space-y-3">
+      <div className="space-y-2">
         {communities.map((community) => (
           <CommunityCard key={community.id} community={community} />
         ))}
